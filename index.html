@@ -322,6 +322,27 @@
   .week-nav{display:flex;align-items:center;gap:8px;}
   .week-label{font-family:var(--mono);font-size:13px;min-width:150px;text-align:center;font-weight:600;}
   .date-hint{font-family:var(--mono);font-size:12.5px;color:var(--ink-soft);background:var(--line-soft);border:1px solid var(--line);border-radius:var(--radius-sm);padding:8px 11px;}
+
+  /* ---------- Teacher module ---------- */
+  nav.tabs{flex-wrap:wrap;row-gap:2px;}
+  nav.tabs button.tab-sep,nav.bottom-nav button.tab-sep{margin-left:16px;position:relative;}
+  nav.tabs button.tab-sep::before{content:'';position:absolute;left:-10px;top:6px;bottom:6px;width:1px;background:var(--line);}
+  nav.bottom-nav{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  nav.bottom-nav button{flex:0 0 auto;min-width:70px;padding:0 6px;}
+  nav.bottom-nav button.tab-sep{margin-left:10px;padding-left:12px;}
+  nav.bottom-nav button.tab-sep::before{content:'';position:absolute;left:0;top:10px;bottom:10px;width:1px;background:var(--line);}
+
+  .rate-list{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:10px;background:var(--surface);}
+  .rate-row{display:flex;align-items:center;gap:10px;padding:4px 2px;}
+  .rate-row label{display:flex;align-items:center;gap:8px;font-size:13.5px;flex:1;min-width:0;cursor:pointer;}
+  .rate-row label span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .rate-row input[type=checkbox]{accent-color:var(--teal);width:16px;height:16px;flex:none;}
+  .rate-row input[type=number]{width:120px;flex:none;}
+  .rate-row .rate-suffix{font-size:12px;color:var(--ink-faint);flex:none;}
+  .breakdown{font-size:11.5px;color:var(--ink-faint);margin-top:2px;}
+
+  .teach-cell{width:96px;}
+  .teach-cell .lbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;}
 </style>
 </head>
 <body>
@@ -347,6 +368,10 @@
     <button data-tab="week">Tổng quan tuần</button>
     <button data-tab="salary">Lương dự tính</button>
     <button data-tab="employees">Nhân viên</button>
+    <button data-tab="teaching" class="tab-sep">Chấm công tiết dạy</button>
+    <button data-tab="teacherSalary">Lương giáo viên</button>
+    <button data-tab="teachers">Giáo viên</button>
+    <button data-tab="classes">Lớp học</button>
   </nav>
 </header>
 
@@ -448,6 +473,98 @@
     </div>
   </section>
 
+  <!-- ============ TEACHING CHECK-IN ============ -->
+  <section class="panel" id="panel-teaching">
+    <h2 class="panel-title">Chấm công tiết dạy</h2>
+    <p class="panel-sub">T2–T6: chỉ có ca tối (T6 chủ yếu dạy bù). T7 &amp; CN: có 7 ca trong ngày. Bấm vào ca của giáo viên để ghi lớp dạy và số giờ.</p>
+    <div class="toolbar">
+      <label class="field-label" style="margin:0 6px 0 0;">Ngày</label>
+      <input type="date" id="teachDate">
+      <span class="date-hint" id="teachDateLabel"></span>
+      <button class="btn btn-ghost" id="teachToday">Hôm nay</button>
+      <div class="spacer"></div>
+    </div>
+    <div class="checkin-list" id="teachList"></div>
+  </section>
+
+  <!-- ============ TEACHER SALARY ============ -->
+  <section class="panel" id="panel-teacherSalary">
+    <h2 class="panel-title">Lương giáo viên dự tính</h2>
+    <p class="panel-sub">Tính theo tổng số giờ dạy mỗi lớp trong tháng, nhân với đơn giá/giờ riêng của từng giáo viên cho lớp đó.</p>
+    <div class="toolbar">
+      <label class="field-label" style="margin:0 6px 0 0;">Tháng</label>
+      <input type="month" id="teacherSalaryMonth">
+      <span class="date-hint" id="teacherSalaryMonthLabel"></span>
+      <div class="spacer"></div>
+    </div>
+    <div class="card">
+      <div class="table-scroll">
+        <table id="teacherSalaryTable">
+          <thead>
+            <tr>
+              <th>Giáo viên</th>
+              <th class="num">Tổng số giờ</th>
+              <th class="num">Lương dự tính</th>
+            </tr>
+          </thead>
+          <tbody id="teacherSalaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TEACHERS ============ -->
+  <section class="panel" id="panel-teachers">
+    <h2 class="panel-title">Danh sách giáo viên</h2>
+    <p class="panel-sub">Quản lý giáo viên và đơn giá lương/giờ theo từng lớp mà giáo viên đó dạy.</p>
+    <div class="toolbar">
+      <button class="btn btn-primary" id="btnAddTeacher">+ Thêm giáo viên</button>
+      <div class="spacer"></div>
+    </div>
+    <div class="card" id="teacherFormWrap" style="display:none;"></div>
+    <div class="card">
+      <div class="table-scroll">
+        <table id="teacherTable">
+          <thead>
+            <tr>
+              <th>Tên</th>
+              <th>Mã GV</th>
+              <th>Lớp dạy &amp; đơn giá/giờ</th>
+              <th>Trạng thái</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="teacherBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CLASSES ============ -->
+  <section class="panel" id="panel-classes">
+    <h2 class="panel-title">Danh sách lớp học</h2>
+    <p class="panel-sub">Thêm lớp trước, sau đó gán giáo viên và đơn giá/giờ cho từng lớp ở tab "Giáo viên".</p>
+    <div class="toolbar">
+      <button class="btn btn-primary" id="btnAddClass">+ Thêm lớp</button>
+      <div class="spacer"></div>
+    </div>
+    <div class="card" id="classFormWrap" style="display:none;"></div>
+    <div class="card">
+      <div class="table-scroll">
+        <table id="classTable">
+          <thead>
+            <tr>
+              <th>Tên lớp</th>
+              <th>Trạng thái</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="classBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
 </main>
 </div>
 
@@ -456,6 +573,10 @@
   <button data-tab="week">Tuần</button>
   <button data-tab="salary">Lương</button>
   <button data-tab="employees">Nhân viên</button>
+  <button data-tab="teaching" class="tab-sep">CC tiết dạy</button>
+  <button data-tab="teacherSalary">Lương GV</button>
+  <button data-tab="teachers">Giáo viên</button>
+  <button data-tab="classes">Lớp học</button>
 </nav>
 
 <!-- Shift edit modal -->
@@ -476,6 +597,26 @@
     <div class="actions">
       <button class="btn btn-ghost" id="shiftCancel">Hủy</button>
       <button class="btn btn-primary" id="shiftSave">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- Teaching entry modal -->
+<div class="modal-overlay" id="teachModal">
+  <div class="modal">
+    <h3 id="teachModalTitle">Cập nhật tiết dạy</h3>
+    <div class="sub" id="teachModalSub"></div>
+    <label class="field-label">Lớp dạy</label>
+    <select id="teachClassSelect" style="width:100%;margin-bottom:14px;"></select>
+    <div id="teachHoursWrap" style="margin-bottom:14px;">
+      <label class="field-label">Số giờ dạy</label>
+      <div class="status-options" id="teachHoursOptions" style="grid-template-columns:repeat(3,1fr);"></div>
+    </div>
+    <label class="field-label">Ghi chú</label>
+    <textarea id="teachNote" placeholder="Ghi chú (không bắt buộc)"></textarea>
+    <div class="actions">
+      <button class="btn btn-ghost" id="teachCancel">Hủy</button>
+      <button class="btn btn-primary" id="teachSave">Lưu</button>
     </div>
   </div>
 </div>
@@ -502,6 +643,18 @@ const SHIFTS = [["morning","Ca sáng"],["afternoon","Ca chiều"],["evening","Ca
 const DOW = ["Th 2","Th 3","Th 4","Th 5","Th 6","Th 7","CN"];
 const WEEKDAYS = [{v:1,l:"T2"},{v:2,l:"T3"},{v:3,l:"T4"},{v:4,l:"T5"},{v:5,l:"T6"},{v:6,l:"T7"},{v:0,l:"CN"}];
 
+/* ---- Teaching module config ---- */
+const HOUR_OPTIONS = [1, 1.5, 2];
+function getCaOptions(iso){
+  // dow: 0=CN,1=T2,...6=T7. T2-T6 => chỉ ca tối. T7 & CN => ca 1..7.
+  const [y,m,d] = iso.split("-").map(Number);
+  const dow = new Date(y, m-1, d).getDay();
+  if(dow===0 || dow===6){
+    return Array.from({length:7}, (_,i)=> [`ca${i+1}`, `Ca ${i+1}`]);
+  }
+  return [["toi","Buổi tối"]];
+}
+
 /* ================= STATE ================= */
 const state = {
   employees: {},        // id -> {name, code, baseSalary, workDays, shiftsPerDay, active}
@@ -511,7 +664,16 @@ const state = {
   weekStart: startOfWeek(new Date()),
   salaryMonth: monthStr(new Date()),
   editingEmpId: null,
-  modalCtx: null
+  modalCtx: null,
+
+  classes: {},           // id -> {name, active}
+  teachers: {},          // id -> {name, code, active, rates: {classId: rate}}
+  teaching: {},          // date -> teacherId -> ca -> {classId, hours, note}
+  teachDate: toISO(new Date()),
+  teacherSalaryMonth: monthStr(new Date()),
+  editingClassId: null,
+  editingTeacherId: null,
+  teachModalCtx: null
 };
 
 /* ================= UTIL ================= */
@@ -588,18 +750,33 @@ async function init(){
   bindWeekUI();
   bindSalaryUI();
   bindModal();
+  bindClassesUI();
+  bindTeachersUI();
+  bindTeachingUI();
+  bindTeachModal();
+  bindTeacherSalaryUI();
 
   document.getElementById("checkinDate").value = state.checkinDate;
   document.getElementById("salaryMonth").value = state.salaryMonth;
   document.getElementById("checkinDateLabel").textContent = fmtDateVN(state.checkinDate);
   document.getElementById("salaryMonthLabel").textContent = fmtMonthVN(state.salaryMonth);
+  document.getElementById("teachDate").value = state.teachDate;
+  document.getElementById("teacherSalaryMonth").value = state.teacherSalaryMonth;
+  document.getElementById("teachDateLabel").textContent = fmtDateVN(state.teachDate);
+  document.getElementById("teacherSalaryMonthLabel").textContent = fmtMonthVN(state.teacherSalaryMonth);
 
   try{
     setConn(null, "Đang kết nối…");
-    const emp = await dbGet("employees");
+    const [emp, cls, tch] = await Promise.all([
+      dbGet("employees"), dbGet("classes"), dbGet("teachers")
+    ]);
     state.employees = emp || {};
+    state.classes = cls || {};
+    state.teachers = tch || {};
     setConn(true, "Đã kết nối");
     renderEmployees();
+    renderClasses();
+    renderTeachers();
     await loadAndRenderCheckin();
   }catch(e){
     setConn(false, "Không kết nối được CSDL");
@@ -624,6 +801,10 @@ function switchTab(tab){
   if(tab==="week") loadAndRenderWeek();
   if(tab==="salary") loadAndRenderSalary();
   if(tab==="checkin") loadAndRenderCheckin();
+  if(tab==="teaching") loadAndRenderTeaching();
+  if(tab==="teacherSalary") loadAndRenderTeacherSalary();
+  if(tab==="teachers") renderTeachers();
+  if(tab==="classes") renderClasses();
 }
 
 /* ================= LEGEND ================= */
@@ -995,6 +1176,409 @@ async function saveShiftModal(){
   }catch(e){
     toast("Lưu thất bại: "+e.message, true);
   }
+}
+
+/* ================= CLASSES ================= */
+function bindClassesUI(){
+  document.getElementById("btnAddClass").addEventListener("click", ()=> openClassForm(null));
+}
+function activeClassIds(){
+  return Object.keys(state.classes)
+    .filter(id=> state.classes[id].active !== false)
+    .sort((a,b)=> (state.classes[a].name||"").localeCompare(state.classes[b].name||"","vi"));
+}
+function renderClasses(){
+  const body = document.getElementById("classBody");
+  const ids = Object.keys(state.classes).sort((a,b)=> (state.classes[a].name||"").localeCompare(state.classes[b].name||"","vi"));
+  if(ids.length===0){
+    body.innerHTML = `<tr><td colspan="3" class="empty-state">Chưa có lớp nào. Bấm "Thêm lớp" để bắt đầu.</td></tr>`;
+    return;
+  }
+  body.innerHTML = ids.map(id=>{
+    const c = state.classes[id];
+    return `<tr>
+      <td><strong>${escapeHtml(c.name||"")}</strong></td>
+      <td><span class="chip ${c.active===false?"inactive-chip":"active-chip"}">${c.active===false?"Ngừng":"Đang dạy"}</span></td>
+      <td style="text-align:right;white-space:nowrap;">
+        <button class="iconbtn" data-edit="${id}" title="Sửa">✎</button>
+        <button class="iconbtn btn-danger" data-del="${id}" title="Xóa">✕</button>
+      </td>
+    </tr>`;
+  }).join("");
+  body.querySelectorAll("[data-edit]").forEach(b=> b.addEventListener("click", ()=> openClassForm(b.dataset.edit)));
+  body.querySelectorAll("[data-del]").forEach(b=> b.addEventListener("click", ()=> deleteClass(b.dataset.del)));
+}
+function openClassForm(id){
+  state.editingClassId = id;
+  const c = id ? state.classes[id] : { name:"", active:true };
+  const wrap = document.getElementById("classFormWrap");
+  wrap.style.display = "block";
+  wrap.innerHTML = `<div class="emp-form" style="grid-template-columns:2fr 1fr;">
+    <div><label class="field-label">Tên lớp *</label><input type="text" id="fClassName" value="${escapeHtml(c.name||"")}" style="width:100%"></div>
+    <div><label class="field-label">Trạng thái</label>
+      <select id="fClassActive" style="width:100%">
+        <option value="1" ${c.active!==false?"selected":""}>Đang dạy</option>
+        <option value="0" ${c.active===false?"selected":""}>Ngừng</option>
+      </select>
+    </div>
+    <div class="actions" style="grid-column:1/-1;">
+      <button class="btn btn-ghost" id="classCancel">Hủy</button>
+      <button class="btn btn-primary" id="classSave">Lưu</button>
+    </div>
+  </div>`;
+  document.getElementById("classCancel").addEventListener("click", closeClassForm);
+  document.getElementById("classSave").addEventListener("click", saveClass);
+  document.getElementById("fClassName").focus();
+}
+function closeClassForm(){
+  document.getElementById("classFormWrap").style.display = "none";
+  document.getElementById("classFormWrap").innerHTML = "";
+  state.editingClassId = null;
+}
+async function saveClass(){
+  const name = document.getElementById("fClassName").value.trim();
+  if(!name){ toast("Vui lòng nhập tên lớp.", true); return; }
+  const id = state.editingClassId || uid();
+  const data = { name, active: document.getElementById("fClassActive").value === "1" };
+  try{
+    await dbPut(`classes/${id}`, data);
+    state.classes[id] = data;
+    renderClasses();
+    closeClassForm();
+    toast("Đã lưu lớp.");
+  }catch(e){ toast("Lưu thất bại: "+e.message, true); }
+}
+async function deleteClass(id){
+  const c = state.classes[id];
+  if(!confirm(`Xóa lớp "${c?.name||""}"? Đơn giá của giáo viên cho lớp này sẽ không còn áp dụng.`)) return;
+  try{
+    await dbDelete(`classes/${id}`);
+    delete state.classes[id];
+    renderClasses();
+    toast("Đã xóa lớp.");
+  }catch(e){ toast("Xóa thất bại: "+e.message, true); }
+}
+
+/* ================= TEACHERS ================= */
+function bindTeachersUI(){
+  document.getElementById("btnAddTeacher").addEventListener("click", ()=> openTeacherForm(null));
+}
+function activeTeacherIds(){
+  return Object.keys(state.teachers)
+    .filter(id=> state.teachers[id].active !== false)
+    .sort((a,b)=> (state.teachers[a].name||"").localeCompare(state.teachers[b].name||"","vi"));
+}
+function teacherRatesLabel(t){
+  const rates = t.rates || {};
+  const ids = Object.keys(rates).filter(cid=> state.classes[cid]);
+  if(ids.length===0) return `<span class="muted">Chưa gán lớp</span>`;
+  return ids.map(cid=> `${escapeHtml(state.classes[cid].name)}: ${fmtVND(rates[cid])}/giờ`).join("<br>");
+}
+function renderTeachers(){
+  const body = document.getElementById("teacherBody");
+  const ids = Object.keys(state.teachers).sort((a,b)=> (state.teachers[a].name||"").localeCompare(state.teachers[b].name||"","vi"));
+  if(ids.length===0){
+    body.innerHTML = `<tr><td colspan="5" class="empty-state">Chưa có giáo viên nào. Bấm "Thêm giáo viên" để bắt đầu.</td></tr>`;
+    return;
+  }
+  body.innerHTML = ids.map(id=>{
+    const t = state.teachers[id];
+    return `<tr>
+      <td><strong>${escapeHtml(t.name||"")}</strong></td>
+      <td class="muted">${escapeHtml(t.code||"—")}</td>
+      <td style="font-size:12.5px;">${teacherRatesLabel(t)}</td>
+      <td><span class="chip ${t.active===false?"inactive-chip":"active-chip"}">${t.active===false?"Ngừng":"Đang dạy"}</span></td>
+      <td style="text-align:right;white-space:nowrap;">
+        <button class="iconbtn" data-edit="${id}" title="Sửa">✎</button>
+        <button class="iconbtn btn-danger" data-del="${id}" title="Xóa">✕</button>
+      </td>
+    </tr>`;
+  }).join("");
+  body.querySelectorAll("[data-edit]").forEach(b=> b.addEventListener("click", ()=> openTeacherForm(b.dataset.edit)));
+  body.querySelectorAll("[data-del]").forEach(b=> b.addEventListener("click", ()=> deleteTeacher(b.dataset.del)));
+}
+function openTeacherForm(id){
+  state.editingTeacherId = id;
+  const t = id ? state.teachers[id] : { name:"", code:"", active:true, rates:{} };
+  const rates = t.rates || {};
+  const wrap = document.getElementById("teacherFormWrap");
+  wrap.style.display = "block";
+
+  const classIds = Object.keys(state.classes).sort((a,b)=> (state.classes[a].name||"").localeCompare(state.classes[b].name||"","vi"));
+  const rateListHtml = classIds.length===0
+    ? `<div class="muted" style="font-size:13px;">Chưa có lớp nào. Vui lòng thêm lớp ở tab "Lớp học" trước.</div>`
+    : `<div class="rate-list">${classIds.map(cid=>{
+        const cls = state.classes[cid];
+        const checked = rates.hasOwnProperty(cid);
+        return `<div class="rate-row">
+          <label><input type="checkbox" class="rate-check" data-cid="${cid}" ${checked?"checked":""}><span>${escapeHtml(cls.name)}${cls.active===false?" (ngừng)":""}</span></label>
+          <input type="number" class="rate-input" data-cid="${cid}" min="0" step="1000" value="${checked?rates[cid]:""}" placeholder="đ/giờ" style="display:${checked?"inline-block":"none"};">
+          <span class="rate-suffix">đ/giờ</span>
+        </div>`;
+      }).join("")}</div>`;
+
+  wrap.innerHTML = `<div class="emp-form">
+    <div class="span2"><label class="field-label">Họ tên *</label><input type="text" id="fTeacherName" value="${escapeHtml(t.name||"")}" style="width:100%"></div>
+    <div><label class="field-label">Mã giáo viên</label><input type="text" id="fTeacherCode" value="${escapeHtml(t.code||"")}" style="width:100%"></div>
+    <div><label class="field-label">Trạng thái</label>
+      <select id="fTeacherActive" style="width:100%">
+        <option value="1" ${t.active!==false?"selected":""}>Đang dạy</option>
+        <option value="0" ${t.active===false?"selected":""}>Ngừng dạy</option>
+      </select>
+    </div>
+    <div class="span2"><label class="field-label">Lớp dạy &amp; đơn giá/giờ</label>${rateListHtml}</div>
+    <div class="actions">
+      <button class="btn btn-ghost" id="teacherCancel">Hủy</button>
+      <button class="btn btn-primary" id="teacherSave">Lưu</button>
+    </div>
+  </div>`;
+
+  wrap.querySelectorAll(".rate-check").forEach(chk=>{
+    chk.addEventListener("change", ()=>{
+      const input = wrap.querySelector(`.rate-input[data-cid="${chk.dataset.cid}"]`);
+      input.style.display = chk.checked ? "inline-block" : "none";
+      if(chk.checked) input.focus();
+    });
+  });
+
+  document.getElementById("teacherCancel").addEventListener("click", closeTeacherForm);
+  document.getElementById("teacherSave").addEventListener("click", saveTeacher);
+  document.getElementById("fTeacherName").focus();
+}
+function closeTeacherForm(){
+  document.getElementById("teacherFormWrap").style.display = "none";
+  document.getElementById("teacherFormWrap").innerHTML = "";
+  state.editingTeacherId = null;
+}
+async function saveTeacher(){
+  const name = document.getElementById("fTeacherName").value.trim();
+  if(!name){ toast("Vui lòng nhập họ tên.", true); return; }
+  const id = state.editingTeacherId || uid();
+  const wrap = document.getElementById("teacherFormWrap");
+  const rates = {};
+  wrap.querySelectorAll(".rate-check").forEach(chk=>{
+    if(chk.checked){
+      const input = wrap.querySelector(`.rate-input[data-cid="${chk.dataset.cid}"]`);
+      rates[chk.dataset.cid] = Number(input.value) || 0;
+    }
+  });
+  const data = {
+    name,
+    code: document.getElementById("fTeacherCode").value.trim(),
+    active: document.getElementById("fTeacherActive").value === "1",
+    rates
+  };
+  try{
+    await dbPut(`teachers/${id}`, data);
+    state.teachers[id] = data;
+    renderTeachers();
+    closeTeacherForm();
+    toast("Đã lưu giáo viên.");
+  }catch(e){ toast("Lưu thất bại: "+e.message, true); }
+}
+async function deleteTeacher(id){
+  const t = state.teachers[id];
+  if(!confirm(`Xóa giáo viên "${t?.name||""}"? Dữ liệu chấm công liên quan sẽ vẫn còn nhưng không hiển thị.`)) return;
+  try{
+    await dbDelete(`teachers/${id}`);
+    delete state.teachers[id];
+    renderTeachers();
+    toast("Đã xóa giáo viên.");
+  }catch(e){ toast("Xóa thất bại: "+e.message, true); }
+}
+
+/* ================= TEACHING CHECK-IN TAB ================= */
+function bindTeachingUI(){
+  document.getElementById("teachDate").addEventListener("change", e=>{
+    state.teachDate = e.target.value;
+    document.getElementById("teachDateLabel").textContent = fmtDateVN(state.teachDate);
+    loadAndRenderTeaching();
+  });
+  document.getElementById("teachToday").addEventListener("click", ()=>{
+    state.teachDate = toISO(new Date());
+    document.getElementById("teachDate").value = state.teachDate;
+    document.getElementById("teachDateLabel").textContent = fmtDateVN(state.teachDate);
+    loadAndRenderTeaching();
+  });
+}
+async function loadAndRenderTeaching(){
+  const date = state.teachDate;
+  try{
+    const data = await dbGet(`teaching/${date}`);
+    state.teaching[date] = data || {};
+  }catch(e){
+    toast("Không tải được dữ liệu tiết dạy ngày này.", true);
+  }
+  renderTeaching();
+}
+function renderTeaching(){
+  const list = document.getElementById("teachList");
+  const ids = activeTeacherIds();
+  if(ids.length===0){
+    list.innerHTML = `<div class="empty-state">Chưa có giáo viên đang dạy. Thêm giáo viên ở tab "Giáo viên".</div>`;
+    return;
+  }
+  const date = state.teachDate;
+  const caList = getCaOptions(date);
+  const dayData = state.teaching[date] || {};
+  list.innerHTML = ids.map(id=>{
+    const t = state.teachers[id];
+    const rec = dayData[id] || {};
+    const cells = caList.map(([ck,label])=>{
+      const s = rec[ck] || {};
+      const hasClass = s.classId && state.classes[s.classId];
+      const clsName = hasClass ? state.classes[s.classId].name : "—";
+      const display = hasClass ? `${s.hours} giờ` : "—";
+      const cellCls = hasClass ? "cell-work" : "cell-none";
+      const textCls = hasClass ? "st-work" : "st-none";
+      return `<button class="shift-cell teach-cell ${cellCls}" data-teacher="${id}" data-ca="${ck}">
+        <div class="lbl">${label}</div>
+        <div class="lbl teach-cell-cls" style="font-weight:600;color:var(--ink);">${escapeHtml(clsName)}</div>
+        <div class="st ${textCls}">${display}</div>
+        ${s.note ? `<div class="nt">${escapeHtml(s.note)}</div>` : ""}
+      </button>`;
+    }).join("");
+    return `<div class="checkin-row">
+      <div class="checkin-name"><div class="nm">${escapeHtml(t.name)}</div><div class="code">${escapeHtml(t.code||"")}</div></div>
+      <div class="shift-btns">${cells}</div>
+    </div>`;
+  }).join("");
+  list.querySelectorAll(".shift-cell").forEach(btn=>{
+    btn.addEventListener("click", ()=> openTeachModal(state.teachDate, btn.dataset.teacher, btn.dataset.ca));
+  });
+}
+
+/* ================= TEACHING MODAL ================= */
+function bindTeachModal(){
+  document.getElementById("teachCancel").addEventListener("click", closeTeachModal);
+  document.getElementById("teachModal").addEventListener("click", e=>{
+    if(e.target.id==="teachModal") closeTeachModal();
+  });
+  document.getElementById("teachSave").addEventListener("click", saveTeachModal);
+}
+function openTeachModal(date, teacherId, ca){
+  const t = state.teachers[teacherId];
+  if(!t) return;
+  const rec = ((state.teaching[date]||{})[teacherId]||{})[ca] || {};
+  state.teachModalCtx = { date, teacherId, ca, classId: rec.classId || "", hours: rec.hours || 1 };
+
+  const caLabelMap = Object.fromEntries(getCaOptions(date));
+  document.getElementById("teachModalTitle").textContent = t.name;
+  document.getElementById("teachModalSub").textContent = `${caLabelMap[ca]||ca} · ${fmtDateVN(date)}`;
+  document.getElementById("teachNote").value = rec.note || "";
+
+  const rates = t.rates || {};
+  const classIds = Object.keys(rates).filter(cid=> state.classes[cid]);
+  const select = document.getElementById("teachClassSelect");
+  if(classIds.length===0){
+    select.innerHTML = `<option value="">-- Giáo viên chưa được gán lớp --</option>`;
+  }else{
+    select.innerHTML = `<option value="">-- Không dạy --</option>` +
+      classIds.map(cid=> `<option value="${cid}" ${cid===state.teachModalCtx.classId?"selected":""}>${escapeHtml(state.classes[cid].name)} (${fmtVND(rates[cid])}/giờ)</option>`).join("");
+  }
+
+  const hoursOpts = document.getElementById("teachHoursOptions");
+  function renderHoursOpts(){
+    hoursOpts.innerHTML = HOUR_OPTIONS.map(h=>{
+      const sel = h===state.teachModalCtx.hours ? "sel o-work" : "";
+      return `<div class="status-opt ${sel}" data-hours="${h}">${h} giờ</div>`;
+    }).join("");
+    hoursOpts.querySelectorAll(".status-opt").forEach(o=>{
+      o.addEventListener("click", ()=>{
+        state.teachModalCtx.hours = Number(o.dataset.hours);
+        renderHoursOpts();
+      });
+    });
+  }
+  renderHoursOpts();
+
+  document.getElementById("teachModal").classList.add("open");
+}
+function closeTeachModal(){
+  document.getElementById("teachModal").classList.remove("open");
+  state.teachModalCtx = null;
+}
+async function saveTeachModal(){
+  if(!state.teachModalCtx) return;
+  const { date, teacherId, ca, hours } = state.teachModalCtx;
+  const classId = document.getElementById("teachClassSelect").value;
+  const note = document.getElementById("teachNote").value.trim();
+  const payload = classId ? { classId, hours, note } : null;
+  try{
+    await dbPut(`teaching/${date}/${teacherId}/${ca}`, payload);
+    if(!state.teaching[date]) state.teaching[date] = {};
+    if(!state.teaching[date][teacherId]) state.teaching[date][teacherId] = {};
+    state.teaching[date][teacherId][ca] = payload || {};
+    closeTeachModal();
+    toast("Đã lưu.");
+    if(state.currentTab==="teaching") renderTeaching();
+    if(state.currentTab==="teacherSalary") loadAndRenderTeacherSalary();
+  }catch(e){
+    toast("Lưu thất bại: "+e.message, true);
+  }
+}
+
+/* ================= TEACHER SALARY TAB ================= */
+function bindTeacherSalaryUI(){
+  document.getElementById("teacherSalaryMonth").addEventListener("change", e=>{
+    state.teacherSalaryMonth = e.target.value;
+    document.getElementById("teacherSalaryMonthLabel").textContent = fmtMonthVN(state.teacherSalaryMonth);
+    loadAndRenderTeacherSalary();
+  });
+}
+async function loadAndRenderTeacherSalary(){
+  const [y,m] = state.teacherSalaryMonth.split("-").map(Number);
+  const first = new Date(y, m-1, 1);
+  const last = new Date(y, m, 0);
+  const startISO = toISO(first), endISO = toISO(last);
+  try{
+    const data = await dbGetRange("teaching", startISO, endISO);
+    Object.assign(state.teaching, data || {});
+  }catch(e){
+    toast("Không tải được dữ liệu tiết dạy tháng này.", true);
+  }
+  renderTeacherSalary(startISO, endISO);
+}
+function renderTeacherSalary(startISO, endISO){
+  const body = document.getElementById("teacherSalaryBody");
+  const ids = activeTeacherIds();
+  if(ids.length===0){
+    body.innerHTML = `<tr><td colspan="3" class="empty-state">Chưa có giáo viên nào.</td></tr>`;
+    return;
+  }
+  const dates = Object.keys(state.teaching).filter(d=> d>=startISO && d<=endISO);
+  body.innerHTML = ids.map(id=>{
+    const t = state.teachers[id];
+    const rates = t.rates || {};
+    let totalHours = 0, totalPay = 0;
+    const breakdown = {}; // classId -> {hours, pay}
+    dates.forEach(d=>{
+      const rec = (state.teaching[d]||{})[id];
+      if(!rec) return;
+      Object.values(rec).forEach(s=>{
+        if(!s || !s.classId) return;
+        const hours = Number(s.hours)||0;
+        const rate = rates[s.classId]||0;
+        const pay = hours*rate;
+        totalHours += hours;
+        totalPay += pay;
+        if(!breakdown[s.classId]) breakdown[s.classId] = {hours:0, pay:0};
+        breakdown[s.classId].hours += hours;
+        breakdown[s.classId].pay += pay;
+      });
+    });
+    const breakdownHtml = Object.keys(breakdown).length
+      ? `<div class="breakdown">${Object.keys(breakdown).map(cid=>{
+          const cls = state.classes[cid];
+          return `${escapeHtml(cls?cls.name:"(lớp đã xóa)")}: ${breakdown[cid].hours} giờ`;
+        }).join(" · ")}</div>`
+      : "";
+    return `<tr>
+      <td><strong>${escapeHtml(t.name)}</strong>${breakdownHtml}</td>
+      <td class="num">${totalHours}</td>
+      <td class="num"><strong>${fmtVND(totalPay)}</strong></td>
+    </tr>`;
+  }).join("");
 }
 
 init();
