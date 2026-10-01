@@ -343,6 +343,35 @@
 
   .teach-cell{width:96px;}
   .teach-cell .lbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;}
+
+  /* ---------- Teaching month calendar ---------- */
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);min-width:720px;}
+  .cal-dow{padding:10px 6px;text-align:center;font-size:11.5px;font-weight:600;color:var(--ink-soft);background:var(--line-soft);border-bottom:1px solid var(--line);text-transform:uppercase;letter-spacing:.03em;}
+  .cal-day{min-height:96px;padding:6px;border-right:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);cursor:pointer;display:flex;flex-direction:column;gap:3px;min-width:0;transition:background .14s var(--ease);}
+  .cal-day:nth-child(7n){border-right:none;}
+  .cal-day:hover{background:var(--teal-soft);}
+  .cal-day.blank{background:var(--line-soft);cursor:default;opacity:.5;}
+  .cal-day.blank:hover{background:var(--line-soft);}
+  .cal-num{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--ink-soft);width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;}
+  .cal-day.we .cal-num{color:var(--gold);}
+  .cal-day.today .cal-num{background:var(--grad-primary);color:#fff;}
+  .cal-ev{font-size:10.5px;line-height:1.3;border-radius:6px;padding:2px 5px;background:var(--teal-soft);color:var(--teal-ink);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cal-tot{margin-top:auto;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);text-align:right;}
+
+  /* ---------- Main group switch (Văn phòng / Dạy) ---------- */
+  .group-switch{max-width:1180px;margin:0 auto;padding:0 18px 12px;display:flex;gap:8px;}
+  .group-switch button{
+    cursor:pointer;border:1.5px solid var(--line);background:var(--surface);color:var(--ink-soft);
+    border-radius:20px;padding:8px 20px;font-size:14px;font-weight:600;box-shadow:var(--shadow-xs);
+    transition:all .18s var(--ease);
+  }
+  .group-switch button:hover{border-color:var(--ink-faint);color:var(--ink);}
+  .group-switch button.active{background:var(--grad-primary);border-color:transparent;color:#fff;box-shadow:var(--shadow-glow);}
+  .grp-hide{display:none !important;}
+  @media (max-width:720px){.group-switch button{flex:1;padding:9px 10px;}}
+  .cal-ev.s-leave{background:var(--amber-soft);color:#92400E;}
+  .cal-ev.s-holiday{background:var(--gold-soft);color:#5B21B6;}
+  .cal-ev.s-absent{background:var(--brick-soft);color:#9F1239;}
 </style>
 </head>
 <body>
@@ -363,12 +392,18 @@
     </div>
     <div class="conn-status"><span class="dot" id="connDot"></span><span id="connText">Đang kết nối…</span></div>
   </div>
+  <div class="group-switch" id="groupSwitch">
+    <button data-group="office" class="active">🏢 Văn phòng</button>
+    <button data-group="teach">📚 Dạy</button>
+  </div>
   <nav class="tabs" id="tabsTop">
     <button data-tab="checkin" class="active">Chấm công</button>
     <button data-tab="week">Tổng quan tuần</button>
+    <button data-tab="officeCal">Lịch tháng</button>
     <button data-tab="salary">Lương dự tính</button>
     <button data-tab="employees">Nhân viên</button>
-    <button data-tab="teaching" class="tab-sep">Chấm công tiết dạy</button>
+    <button data-tab="teaching">Chấm công tiết dạy</button>
+    <button data-tab="teachCal">Lịch dạy</button>
     <button data-tab="teacherSalary">Lương giáo viên</button>
     <button data-tab="teachers">Giáo viên</button>
     <button data-tab="classes">Lớp học</button>
@@ -412,6 +447,25 @@
         <table class="week-grid" id="weekTable"></table>
       </div>
     </div>
+  </section>
+
+  <!-- ============ OFFICE MONTH CALENDAR ============ -->
+  <section class="panel" id="panel-officeCal">
+    <h2 class="panel-title">Lịch chấm công tháng</h2>
+    <p class="panel-sub">Xem chấm công cả tháng dạng lịch. Chọn một nhân viên để xem chi tiết từng ca, hoặc xem tổng hợp tất cả. Bấm vào một ngày để mở chấm công ngày đó.</p>
+    <div class="toolbar">
+      <div class="week-nav">
+        <button class="iconbtn" id="ocPrev">‹</button>
+        <span class="week-label" id="ocLabel"></span>
+        <button class="iconbtn" id="ocNext">›</button>
+      </div>
+      <button class="btn btn-ghost" id="ocToday">Tháng này</button>
+      <select id="ocEmp"></select>
+      <div class="spacer"></div>
+    </div>
+    <div class="legend" id="legendOffCal"></div>
+    <div class="salary-note" id="ocSummary"></div>
+    <div class="card"><div class="table-scroll"><div class="cal-grid" id="ocGrid"></div></div></div>
   </section>
 
   <!-- ============ SALARY ============ -->
@@ -476,7 +530,7 @@
   <!-- ============ TEACHING CHECK-IN ============ -->
   <section class="panel" id="panel-teaching">
     <h2 class="panel-title">Chấm công tiết dạy</h2>
-    <p class="panel-sub">T2–T6: chỉ có ca tối (T6 chủ yếu dạy bù). T7 &amp; CN: có 7 ca trong ngày. Bấm vào ca của giáo viên để ghi lớp dạy và số giờ.</p>
+    <p class="panel-sub">T2–T6: Sáng 3 ca, Trưa 3 ca, Tối 1 ca (T6 chủ yếu dạy bù). T7 &amp; CN: có 7 ca trong ngày. Bấm vào ca của giáo viên để ghi lớp dạy và số giờ.</p>
     <div class="toolbar">
       <label class="field-label" style="margin:0 6px 0 0;">Ngày</label>
       <input type="date" id="teachDate">
@@ -485,6 +539,24 @@
       <div class="spacer"></div>
     </div>
     <div class="checkin-list" id="teachList"></div>
+  </section>
+
+  <!-- ============ TEACHING MONTH CALENDAR ============ -->
+  <section class="panel" id="panel-teachCal">
+    <h2 class="panel-title">Lịch chấm công tháng</h2>
+    <p class="panel-sub">Xem các buổi dạy trong tháng dạng lịch. Bấm vào một ngày để mở chấm công của ngày đó.</p>
+    <div class="toolbar">
+      <div class="week-nav">
+        <button class="iconbtn" id="calPrev">‹</button>
+        <span class="week-label" id="calLabel"></span>
+        <button class="iconbtn" id="calNext">›</button>
+      </div>
+      <button class="btn btn-ghost" id="calToday">Tháng này</button>
+      <select id="calTeacher"></select>
+      <div class="spacer"></div>
+    </div>
+    <div class="salary-note" id="calSummary"></div>
+    <div class="card"><div class="table-scroll"><div class="cal-grid" id="calGrid"></div></div></div>
   </section>
 
   <!-- ============ TEACHER SALARY ============ -->
@@ -571,9 +643,11 @@
 <nav class="bottom-nav" id="tabsBottom">
   <button data-tab="checkin" class="active">Chấm công</button>
   <button data-tab="week">Tuần</button>
+  <button data-tab="officeCal">Lịch tháng</button>
   <button data-tab="salary">Lương</button>
   <button data-tab="employees">Nhân viên</button>
-  <button data-tab="teaching" class="tab-sep">CC tiết dạy</button>
+  <button data-tab="teaching">CC tiết dạy</button>
+  <button data-tab="teachCal">Lịch GV</button>
   <button data-tab="teacherSalary">Lương GV</button>
   <button data-tab="teachers">Giáo viên</button>
   <button data-tab="classes">Lớp học</button>
@@ -610,7 +684,7 @@
     <select id="teachClassSelect" style="width:100%;margin-bottom:14px;"></select>
     <div id="teachHoursWrap" style="margin-bottom:14px;">
       <label class="field-label">Số giờ dạy</label>
-      <div class="status-options" id="teachHoursOptions" style="grid-template-columns:repeat(3,1fr);"></div>
+      <div class="status-options" id="teachHoursOptions" style="grid-template-columns:repeat(4,1fr);"></div>
     </div>
     <label class="field-label">Ghi chú</label>
     <textarea id="teachNote" placeholder="Ghi chú (không bắt buộc)"></textarea>
@@ -644,15 +718,26 @@ const DOW = ["Th 2","Th 3","Th 4","Th 5","Th 6","Th 7","CN"];
 const WEEKDAYS = [{v:1,l:"T2"},{v:2,l:"T3"},{v:3,l:"T4"},{v:4,l:"T5"},{v:5,l:"T6"},{v:6,l:"T7"},{v:0,l:"CN"}];
 
 /* ---- Teaching module config ---- */
-const HOUR_OPTIONS = [1, 1.5, 2];
+const HOUR_OPTIONS = [0.5, 1, 1.5, 2];
 function getCaOptions(iso){
-  // dow: 0=CN,1=T2,...6=T7. T2-T6 => chỉ ca tối. T7 & CN => ca 1..7.
+  // dow: 0=CN,1=T2,...6=T7. T2-T6 => buổi sáng, trưa, tối. T7 & CN => ca 1..7.
   const [y,m,d] = iso.split("-").map(Number);
   const dow = new Date(y, m-1, d).getDay();
   if(dow===0 || dow===6){
     return Array.from({length:7}, (_,i)=> [`ca${i+1}`, `Ca ${i+1}`]);
   }
-  return [["toi","Buổi tối"]];
+  // T2-T6: Sáng 1-3, Trưa 1-3, Tối. Giữ lại các ô cũ (Buổi sáng/trưa, Ca 1-7) nếu ngày đó đã có dữ liệu.
+  const day = (state.teaching && state.teaching[iso]) || {};
+  const used = new Set();
+  Object.values(day).forEach(r=> Object.keys(r||{}).forEach(k=> used.add(k)));
+  const out = [];
+  if(used.has("sang")) out.push(["sang","Buổi sáng"]);
+  for(let n=1;n<=3;n++) out.push([`sang${n}`, `Sáng ${n}`]);
+  if(used.has("trua")) out.push(["trua","Buổi trưa"]);
+  for(let n=1;n<=3;n++) out.push([`trua${n}`, `Trưa ${n}`]);
+  for(let n=1;n<=7;n++) if(used.has(`ca${n}`)) out.push([`ca${n}`, `Ca ${n}`]);
+  out.push(["toi","Buổi tối"]);
+  return out;
 }
 
 /* ================= STATE ================= */
@@ -660,6 +745,8 @@ const state = {
   employees: {},        // id -> {name, code, baseSalary, workDays, shiftsPerDay, active}
   attendance: {},        // date -> empId -> shift -> {status, note}
   currentTab: "checkin",
+  group: "office",
+  lastTab: { office:"checkin", teach:"teaching" },
   checkinDate: toISO(new Date()),
   weekStart: startOfWeek(new Date()),
   salaryMonth: monthStr(new Date()),
@@ -671,6 +758,10 @@ const state = {
   teaching: {},          // date -> teacherId -> ca -> {classId, hours, note}
   teachDate: toISO(new Date()),
   teacherSalaryMonth: monthStr(new Date()),
+  calMonth: monthStr(new Date()),
+  offCalMonth: monthStr(new Date()),
+  offCalEmp: "all",
+  calTeacher: "all",
   editingClassId: null,
   editingTeacherId: null,
   teachModalCtx: null
@@ -755,6 +846,8 @@ async function init(){
   bindTeachingUI();
   bindTeachModal();
   bindTeacherSalaryUI();
+  bindCalUI();
+  bindOffCalUI();
 
   document.getElementById("checkinDate").value = state.checkinDate;
   document.getElementById("salaryMonth").value = state.salaryMonth;
@@ -785,13 +878,33 @@ async function init(){
 }
 
 /* ================= TABS ================= */
+const GROUP_TABS = {
+  office: ["checkin","week","officeCal","salary","employees"],
+  teach:  ["teaching","teachCal","teacherSalary","teachers","classes"]
+};
+function groupOf(tab){ return GROUP_TABS.teach.includes(tab) ? "teach" : "office"; }
+function applyGroupUI(){
+  document.querySelectorAll("#tabsTop button, #tabsBottom button").forEach(b=>{
+    b.classList.toggle("grp-hide", groupOf(b.dataset.tab)!==state.group);
+  });
+  document.querySelectorAll("#groupSwitch button").forEach(b=>{
+    b.classList.toggle("active", b.dataset.group===state.group);
+  });
+}
 function bindTabs(){
   document.querySelectorAll("#tabsTop button, #tabsBottom button").forEach(btn=>{
     btn.addEventListener("click", ()=> switchTab(btn.dataset.tab));
   });
+  document.querySelectorAll("#groupSwitch button").forEach(btn=>{
+    btn.addEventListener("click", ()=> switchTab(state.lastTab[btn.dataset.group]));
+  });
+  applyGroupUI();
 }
 function switchTab(tab){
   state.currentTab = tab;
+  state.group = groupOf(tab);
+  state.lastTab[state.group] = tab;
+  applyGroupUI();
   document.querySelectorAll("#tabsTop button, #tabsBottom button").forEach(b=>{
     b.classList.toggle("active", b.dataset.tab===tab);
   });
@@ -802,6 +915,8 @@ function switchTab(tab){
   if(tab==="salary") loadAndRenderSalary();
   if(tab==="checkin") loadAndRenderCheckin();
   if(tab==="teaching") loadAndRenderTeaching();
+  if(tab==="teachCal") loadAndRenderCal();
+  if(tab==="officeCal") loadAndRenderOffCal();
   if(tab==="teacherSalary") loadAndRenderTeacherSalary();
   if(tab==="teachers") renderTeachers();
   if(tab==="classes") renderClasses();
@@ -1579,6 +1694,164 @@ function renderTeacherSalary(startISO, endISO){
       <td class="num"><strong>${fmtVND(totalPay)}</strong></td>
     </tr>`;
   }).join("");
+}
+
+/* ================= OFFICE MONTH CALENDAR ================= */
+function bindOffCalUI(){
+  const shift = n=>{
+    const [y,m] = state.offCalMonth.split("-").map(Number);
+    state.offCalMonth = monthStr(new Date(y, m-1+n, 1));
+    loadAndRenderOffCal();
+  };
+  document.getElementById("ocPrev").addEventListener("click", ()=> shift(-1));
+  document.getElementById("ocNext").addEventListener("click", ()=> shift(1));
+  document.getElementById("ocToday").addEventListener("click", ()=>{ state.offCalMonth = monthStr(new Date()); loadAndRenderOffCal(); });
+  document.getElementById("ocEmp").addEventListener("change", e=>{ state.offCalEmp = e.target.value; renderOffCal(); });
+}
+async function loadAndRenderOffCal(){
+  const [y,m] = state.offCalMonth.split("-").map(Number);
+  const startISO = toISO(new Date(y,m-1,1)), endISO = toISO(new Date(y,m,0));
+  document.getElementById("ocLabel").textContent = fmtMonthVN(state.offCalMonth);
+  document.getElementById("legendOffCal").innerHTML = legendHtml();
+  try{
+    const data = await dbGetRange("attendance", startISO, endISO);
+    Object.assign(state.attendance, data || {});
+  }catch(e){ toast("Không tải được dữ liệu lịch tháng này.", true); }
+  renderOffCal();
+}
+function renderOffCal(){
+  const [y,m] = state.offCalMonth.split("-").map(Number);
+  const ids = activeEmployeeIds();
+  if(state.offCalEmp!=="all" && !ids.includes(state.offCalEmp)) state.offCalEmp = "all";
+  const isAll = state.offCalEmp==="all";
+  document.getElementById("ocEmp").innerHTML = `<option value="all">Tất cả nhân viên</option>` +
+    ids.map(id=>`<option value="${id}" ${id===state.offCalEmp?"selected":""}>${escapeHtml(state.employees[id].name)}</option>`).join("");
+  const who = isAll ? ids : [state.offCalEmp];
+  const lead = (new Date(y,m-1,1).getDay()+6)%7;
+  const todayISO = toISO(new Date());
+  const tot = {work:0, leave:0, holiday:0, absent:0};
+  let html = DOW.map(d=>`<div class="cal-dow">${d}</div>`).join("");
+  for(let i=0;i<lead;i++) html += `<div class="cal-day blank"></div>`;
+  for(let d=1; d<=daysInMonth(y,m); d++){
+    const iso = `${y}-${pad(m)}-${pad(d)}`;
+    const dow = new Date(y,m-1,d).getDay();
+    const dayData = state.attendance[iso] || {};
+    let evs = "";
+    const dsum = {work:0, leave:0, holiday:0, absent:0};
+    who.forEach(id=>{
+      const rec = dayData[id];
+      if(!rec) return;
+      SHIFTS.forEach(([sk,label])=>{
+        const s = rec[sk];
+        if(!s || !s.status || s.status==="none") return;
+        const v = s.status==="work" ? (s.value===0.5?0.5:1) : 1;
+        dsum[s.status] += v; tot[s.status] += v;
+        if(!isAll){
+          const txt = s.status==="work" ? (s.value===0.5?"½":"1") : STATUS[s.status].short;
+          const cls = s.status==="work" ? "" : " s-"+s.status;
+          evs += `<div class="cal-ev${cls}" title="${escapeHtml(label+(s.note?" · "+s.note:""))}">${label.replace("Ca ","")} · ${txt}${s.note?" ✎":""}</div>`;
+        }
+      });
+    });
+    if(isAll){
+      if(dsum.work) evs += `<div class="cal-ev">Làm ${dsum.work}</div>`;
+      if(dsum.leave) evs += `<div class="cal-ev s-leave">Phép ${dsum.leave}</div>`;
+      if(dsum.holiday) evs += `<div class="cal-ev s-holiday">Lễ ${dsum.holiday}</div>`;
+      if(dsum.absent) evs += `<div class="cal-ev s-absent">Vắng ${dsum.absent}</div>`;
+    }
+    html += `<div class="cal-day${dow===0||dow===6?" we":""}${iso===todayISO?" today":""}" data-date="${iso}"><span class="cal-num">${d}</span>${evs}</div>`;
+  }
+  const grid = document.getElementById("ocGrid");
+  grid.innerHTML = html;
+  grid.querySelectorAll(".cal-day[data-date]").forEach(c=> c.addEventListener("click", ()=>{
+    state.checkinDate = c.dataset.date;
+    document.getElementById("checkinDate").value = state.checkinDate;
+    document.getElementById("checkinDateLabel").textContent = fmtDateVN(state.checkinDate);
+    switchTab("checkin");
+  }));
+  document.getElementById("ocSummary").innerHTML =
+    `${isAll?"Tổng hợp tất cả nhân viên":"Tháng này"}: Làm <b>${tot.work}</b> công · Phép <b>${tot.leave}</b> ca · Lễ <b>${tot.holiday}</b> ca · Vắng không lương <b>${tot.absent}</b> ca`;
+}
+
+/* ================= TEACHING MONTH CALENDAR ================= */
+function caShort(ck){
+  let mm = /^(sang|trua)(\d)$/.exec(ck);
+  if(mm) return (mm[1]==="sang"?"Sáng ":"Trưa ")+mm[2];
+  if(ck==="sang") return "Sáng";
+  if(ck==="trua") return "Trưa";
+  if(ck==="toi") return "Tối";
+  return ck.replace(/^ca/i,"Ca ");
+}
+function bindCalUI(){
+  const shift = n=>{
+    const [y,m] = state.calMonth.split("-").map(Number);
+    state.calMonth = monthStr(new Date(y, m-1+n, 1));
+    loadAndRenderCal();
+  };
+  document.getElementById("calPrev").addEventListener("click", ()=> shift(-1));
+  document.getElementById("calNext").addEventListener("click", ()=> shift(1));
+  document.getElementById("calToday").addEventListener("click", ()=>{ state.calMonth = monthStr(new Date()); loadAndRenderCal(); });
+  document.getElementById("calTeacher").addEventListener("change", e=>{ state.calTeacher = e.target.value; renderCal(); });
+}
+async function loadAndRenderCal(){
+  const [y,m] = state.calMonth.split("-").map(Number);
+  const startISO = toISO(new Date(y,m-1,1)), endISO = toISO(new Date(y,m,0));
+  document.getElementById("calLabel").textContent = fmtMonthVN(state.calMonth);
+  try{
+    const data = await dbGetRange("teaching", startISO, endISO);
+    Object.assign(state.teaching, data || {});
+  }catch(e){ toast("Không tải được dữ liệu lịch tháng này.", true); }
+  renderCal();
+}
+function renderCal(){
+  const [y,m] = state.calMonth.split("-").map(Number);
+  const ids = activeTeacherIds();
+  if(state.calTeacher!=="all" && !ids.includes(state.calTeacher)) state.calTeacher = "all";
+  const isAll = state.calTeacher==="all";
+  document.getElementById("calTeacher").innerHTML = `<option value="all">Tất cả giáo viên</option>` +
+    ids.map(id=>`<option value="${id}" ${id===state.calTeacher?"selected":""}>${escapeHtml(state.teachers[id].name)}</option>`).join("");
+  const who = isAll ? ids : [state.calTeacher];
+  const lead = (new Date(y,m-1,1).getDay()+6)%7;
+  const todayISO = toISO(new Date());
+  let html = DOW.map(d=>`<div class="cal-dow">${d}</div>`).join("");
+  for(let i=0;i<lead;i++) html += `<div class="cal-day blank"></div>`;
+  let monthHours = 0, daysTaught = 0;
+  const byClass = {};
+  for(let d=1; d<=daysInMonth(y,m); d++){
+    const iso = `${y}-${pad(m)}-${pad(d)}`;
+    const dow = new Date(y,m-1,d).getDay();
+    const dayData = state.teaching[iso] || {};
+    let evs = "", dayHours = 0;
+    who.forEach(id=>{
+      const rec = dayData[id];
+      if(!rec) return;
+      const nm = state.teachers[id].name;
+      getCaOptions(iso).forEach(([ck])=>{
+        const s = rec[ck];
+        if(!s || !s.classId) return;
+        const h = Number(s.hours)||0;
+        const cls = state.classes[s.classId];
+        const cn = cls ? cls.name : "(lớp đã xóa)";
+        dayHours += h;
+        byClass[s.classId] = (byClass[s.classId]||0) + h;
+        const tip = `${nm} · ${caShort(ck)} · ${cn} · ${h} giờ` + (s.note ? ` · ${s.note}` : "");
+        evs += `<div class="cal-ev" title="${escapeHtml(tip)}">${isAll ? escapeHtml(nm)+" · " : ""}${caShort(ck)} · ${escapeHtml(cn)} · ${h}g</div>`;
+      });
+    });
+    if(dayHours>0) daysTaught++;
+    monthHours += dayHours;
+    html += `<div class="cal-day${dow===0||dow===6?" we":""}${iso===todayISO?" today":""}" data-date="${iso}"><span class="cal-num">${d}</span>${evs}${dayHours?`<div class="cal-tot">${dayHours} giờ</div>`:""}</div>`;
+  }
+  const grid = document.getElementById("calGrid");
+  grid.innerHTML = html;
+  grid.querySelectorAll(".cal-day[data-date]").forEach(c=> c.addEventListener("click", ()=>{
+    state.teachDate = c.dataset.date;
+    document.getElementById("teachDate").value = state.teachDate;
+    document.getElementById("teachDateLabel").textContent = fmtDateVN(state.teachDate);
+    switchTab("teaching");
+  }));
+  const parts = Object.keys(byClass).map(cid=> `${escapeHtml(state.classes[cid]?state.classes[cid].name:"(lớp đã xóa)")}: <b>${byClass[cid]} giờ</b>`);
+  document.getElementById("calSummary").innerHTML = `Tổng tháng: <b>${monthHours} giờ</b> · <b>${daysTaught}</b> ngày có dạy` + (parts.length ? " · " + parts.join(" · ") : "");
 }
 
 init();
