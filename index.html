@@ -372,6 +372,16 @@
   .cal-ev.s-leave{background:var(--amber-soft);color:#92400E;}
   .cal-ev.s-holiday{background:var(--gold-soft);color:#5B21B6;}
   .cal-ev.s-absent{background:var(--brick-soft);color:#9F1239;}
+  /* ---------- Mobile: ô ca xuống hàng, vừa màn hình ---------- */
+  .shift-btns{max-width:100%;}
+  @media (max-width:720px){
+    .checkin-row{flex-direction:column;align-items:stretch;gap:8px;padding:12px;}
+    .checkin-name{flex:none;}
+    .shift-btns{width:100%;display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;}
+    .shift-cell,.teach-cell{width:auto;min-width:0;}
+    .teach-cell .lbl{max-width:none;}
+    .shift-cell .nt{max-width:100%;}
+  }
 </style>
 </head>
 <body>
