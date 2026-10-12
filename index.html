@@ -266,6 +266,8 @@
   .wk-cell.cell-holiday{background:var(--holiday-bg);border:1.5px solid var(--holiday);color:var(--holiday-ink);box-shadow:none;}
   .wk-cell.cell-absent{background:var(--absent-bg);border:1.5px solid var(--absent);color:var(--absent-ink);box-shadow:none;}
   .wk-pair{display:flex;justify-content:center;}
+  .week-grid .d-s,.week-grid .nm-short{display:none;}
+  .wk-hint{display:none;}
 
   /* ---------- Note ---------- */
   .salary-note{
@@ -514,8 +516,20 @@
     .stat{padding:6px 8px;}
     .stat b{font-size:19px;}
     .summary{margin-bottom:8px;}
-    .week-grid{min-width:760px;}
-    .week-grid td.emp-col,.week-grid th.emp-col{min-width:96px;max-width:104px;padding-left:8px;padding-right:6px;}
+    /* Tổng quan tuần: vừa khít chiều rộng, không cuộn ngang — mỗi ngày xếp 3 ca theo chiều dọc */
+    .week-grid{min-width:0;table-layout:fixed;width:100%;}
+    .week-grid th.emp-col,.week-grid td.emp-col{width:54px;min-width:0;max-width:none;padding:6px 4px 6px 6px;font-size:12px;white-space:nowrap;}
+    .week-grid th{padding:7px 0;font-size:11px;}
+    .week-grid td{padding:5px 2px;}
+    .week-grid .day-head .dow{font-size:9.5px;letter-spacing:-.02em;}
+    .week-grid .d-l{display:none;}
+    .week-grid .d-s{display:inline;}
+    .week-grid .nm-full{display:none;}
+    .week-grid .nm-short{display:inline;}
+    .wk-pair{flex-direction:column;align-items:stretch;gap:3px;}
+    .wk-cell{width:100%;height:22px;margin:0;font-size:11px;border-radius:6px;}
+    .wk-cell:hover{transform:none;}
+    .wk-hint{display:block;font-size:11.5px;color:var(--ink-2);margin:0 0 8px;}
 
     /* bảng → thẻ xếp dọc, không cần cuộn ngang */
     table.stack{min-width:0;}
@@ -613,6 +627,7 @@
       <div class="spacer"></div>
     </div>
     <div class="legend" id="legendWeek"></div>
+    <div class="wk-hint">Mỗi ngày có 3 ô, từ trên xuống: Sáng · Chiều · Tối.</div>
     <div class="card">
       <div class="table-scroll">
         <table class="week-grid" id="weekTable"></table>
@@ -1340,7 +1355,7 @@ function renderWeek(){
 
   let thead = `<thead><tr><th class="emp-col">Nhân viên</th>`;
   days.forEach((d,i)=>{
-    thead += `<th class="day-head${toISO(d)===toISO(new Date())?" is-today":""}">${DOW[i]}<span class="dow">${pad(d.getDate())}/${pad(d.getMonth()+1)}</span></th>`;
+    thead += `<th class="day-head${toISO(d)===toISO(new Date())?" is-today":""}"><span class="d-l">${DOW[i]}</span><span class="d-s">${DOW_S[i]}</span><span class="dow">${pad(d.getDate())}/${pad(d.getMonth()+1)}</span></th>`;
   });
   thead += `</tr></thead>`;
 
@@ -1349,10 +1364,19 @@ function renderWeek(){
     return;
   }
 
+  // Tên rút gọn cho mobile: tên gọi (từ cuối); trùng thì lấy 2 từ cuối
+  const lastWords = (n,k)=> (n||"").trim().split(/\s+/).slice(-k).join(" ");
+  const shortNames = {};
+  ids.forEach(id=>{
+    const n = state.employees[id].name;
+    const dup = ids.some(o=> o!==id && lastWords(state.employees[o].name,1)===lastWords(n,1));
+    shortNames[id] = lastWords(n, dup?2:1);
+  });
+
   let tbody = "<tbody>";
   ids.forEach(id=>{
     const e = state.employees[id];
-    tbody += `<tr><td class="emp-col">${escapeHtml(e.name)}</td>`;
+    tbody += `<tr><td class="emp-col" title="${escapeHtml(e.name)}"><span class="nm-full">${escapeHtml(e.name)}</span><span class="nm-short">${escapeHtml(shortNames[id])}</span></td>`;
     days.forEach(d=>{
       const iso = toISO(d);
       const rec = (state.attendance[iso]||{})[id] || {};
